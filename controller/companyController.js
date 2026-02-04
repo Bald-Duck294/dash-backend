@@ -1,4 +1,8 @@
 import prisma from "../config/prismaClient.mjs";
+import {
+  parsePaginationParams,
+  paginateWithPrisma,
+} from "../utils/pagination.js";
 import { serializeBigInt } from "../utils/serializer.js";
 
 // @desc    Create a new company
@@ -27,17 +31,27 @@ export const createCompany = async (req, res) => {
   }
 };
 
-// @desc    Get all companies
-// @route   GET /api/companies
-// @access  Public
 export const getAllCompanies = async (req, res) => {
+  const { page = 1, limit = 10 } = req.query;
   try {
-    const companies = await prisma.companies.findMany({
+    // const companies = await prisma.companies.findMany({
+    //   orderBy: {
+    //     created_at: "desc",
+    //   },
+    // });
+
+    const { data, meta } = await paginateWithPrisma(prisma.companies, {
       orderBy: {
         created_at: "desc",
       },
+      page: parseInt(page),
+      limit: parseInt(limit),
     });
-    res.status(200).json(serializeBigInt(companies));
+
+    res.status(200).json({
+      data: serializeBigInt(data),
+      pagination: meta,
+    });
   } catch (error) {
     console.error("Error fetching companies:", error);
     res.status(500).json({ message: "Failed to fetch companies" });
@@ -88,7 +102,6 @@ export const updateCompany = async (req, res) => {
       },
     });
 
-
     res.status(200).json(serializeBigInt(updatedCompany));
   } catch (error) {
     console.error("Error updating company:", error);
@@ -119,4 +132,3 @@ export const deleteCompany = async (req, res) => {
     res.status(500).json({ message: "Failed to delete company" });
   }
 };
-
