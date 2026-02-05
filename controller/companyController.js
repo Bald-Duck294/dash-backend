@@ -8,28 +8,6 @@ import { serializeBigInt } from "../utils/serializer.js";
 // @desc    Create a new company
 // @route   POST /api/companies
 // @access  Public
-export const createCompany = async (req, res) => {
-  try {
-    const { name, description, contact_email } = req.body;
-
-    if (!name) {
-      return res.status(400).json({ message: "Company name is required" });
-    }
-
-    const newCompany = await prisma.companies.create({
-      data: {
-        name,
-        description,
-        contact_email,
-      },
-    });
-
-    res.status(201).json(serializeBigInt(newCompany));
-  } catch (error) {
-    console.error("Error creating company:", error);
-    res.status(500).json({ message: "Failed to create company" });
-  }
-};
 
 export const getAllCompanies = async (req, res) => {
   const { page = 1, limit = 10 } = req.query;
@@ -55,6 +33,47 @@ export const getAllCompanies = async (req, res) => {
   } catch (error) {
     console.error("Error fetching companies:", error);
     res.status(500).json({ message: "Failed to fetch companies" });
+  }
+};
+
+export const getCompaniesCount = async (req, res) => {
+  try {
+    const totalCount = await prisma.companies.count({
+      where: {
+        // Add any filters here if needed (is_active: true, etc.)
+      },
+    });
+
+    res.status(200).json({
+      totalCount,
+      success: true,
+    });
+  } catch (error) {
+    console.error("Error fetching companies count:", error);
+    res.status(500).json({ message: "Failed to fetch companies count" });
+  }
+};
+
+export const createCompany = async (req, res) => {
+  try {
+    const { name, description, contact_email } = req.body;
+
+    if (!name) {
+      return res.status(400).json({ message: "Company name is required" });
+    }
+
+    const newCompany = await prisma.companies.create({
+      data: {
+        name,
+        description,
+        contact_email,
+      },
+    });
+
+    res.status(201).json(serializeBigInt(newCompany));
+  } catch (error) {
+    console.error("Error creating company:", error);
+    res.status(500).json({ message: "Failed to create company" });
   }
 };
 

@@ -12,6 +12,8 @@ companyRouter
   .get(companyController.getAllCompanies)
   .post(companyController.createCompany);
 
+companyRouter.get("/count", companyController.getCompaniesCount);
+
 // Route to get, update, and delete a specific company by ID
 // GET /api/companies/:id
 // POST /api/companies/:id (for update)
@@ -19,6 +21,7 @@ companyRouter
 companyRouter
   .route("/:id")
   .get(companyController.getCompanyById)
+
   .post(companyController.updateCompany) // Using POST for updates as you requested
   .delete(companyController.deleteCompany);
 
