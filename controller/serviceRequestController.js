@@ -24,7 +24,7 @@ export const createServiceRequest = async (req, res) => {
   }
 
   try {
-    const data = await prisma.serviceRequest.create({
+    const data = await prisma.service_request.create({
       data: {
         latitude,
         longitude,
@@ -60,7 +60,7 @@ export const getServiceRequests = async (req, res) => {
   if (requestType) where.request_type = requestType;
 
   try {
-    const data = await prisma.serviceRequest.findMany({
+    const data = await prisma.service_request.findMany({
       where,
       orderBy: { created_at: "desc" },
     });

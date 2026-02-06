@@ -404,7 +404,7 @@ model saved_locations {
   @@unique([user_id, location_id])
 }
 
-model ServiceRequest {
+model service_request {
   id BigInt @id @default(autoincrement())
 
   latitude  Decimal @db.Decimal(10, 7)
