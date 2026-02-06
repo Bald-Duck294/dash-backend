@@ -653,3 +653,61 @@ export const deleteUser = async (req, res) => {
       .json({ message: "Error deleting user", error: error.message });
   }
 };
+
+export const changeOwnPassword = async (req, res) => {
+  try {
+    // 🔐 userId MUST come from auth middleware
+    const userId = BigInt(req.user.id);
+
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        message: "Current password and new password are required",
+      });
+    }
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({
+        message: "Password must be at least 8 characters long",
+      });
+    }
+
+    const user = await prisma.users.findUnique({
+      where: { id: userId },
+      select: { password: true },
+    });
+
+    if (!user || !user.password) {
+      return res.status(404).json({
+        message: "User not found",
+      });
+    }
+
+    const isValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isValid) {
+      return res.status(401).json({
+        message: "Current password is incorrect",
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await prisma.users.update({
+      where: { id: userId },
+      data: {
+        password: hashedPassword,
+        updated_at: new Date(),
+      },
+    });
+
+    res.status(200).json({
+      message: "Password updated successfully",
+    });
+  } catch (error) {
+    console.error("changeOwnPassword:", error);
+    res.status(500).json({
+      message: "Error updating password",
+    });
+  }
+};
