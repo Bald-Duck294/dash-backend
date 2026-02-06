@@ -73,7 +73,7 @@ model locations {
   options                Json?                 @default("{}")
   lang_preference        String?               @db.VarChar(255)
   images                 String[]
-  deleted_at              DateTime?
+  deleted_at             DateTime?
   address                String?
   average_cleaning_score Float?
   city                   String?
@@ -83,7 +83,7 @@ model locations {
   user_review_score      Float?
   pincode                String?
   state                  String?
-  facility_company_id   BigInt?
+  facility_company_id    BigInt?
   no_of_photos           Int?
   usage_category         Json?                 @db.Json
   close_time             DateTime?             @db.Time(6)
@@ -402,4 +402,17 @@ model saved_locations {
   users       users     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@unique([user_id, location_id])
+}
+
+model ServiceRequest {
+  id BigInt @id @default(autoincrement())
+
+  latitude  Decimal @db.Decimal(10, 7)
+  longitude Decimal @db.Decimal(10, 7)
+
+  city  String?
+  state String?
+
+  request_type String // IMPORTANT: validated in API layer
+  created_at   DateTime @default(now())
 }

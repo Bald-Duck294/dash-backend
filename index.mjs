@@ -21,6 +21,7 @@ import facility_company_router from "./routes/facilityCompanyRoutes.js";
 import shift_router from "./routes/shiftRoutes.js";
 import fcmRoutes from "./routes/fcmRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
+import serviceReqRouter from "./routes/serviceRequestRoute.js";
 dotenv.config();
 
 const app = express();
@@ -98,6 +99,7 @@ app.use("/api/fcm", fcmRoutes);
 app.use("/api", registered_users_router);
 app.use("/api/reports", reportRouter);
 app.use("/api/facility-companies", facility_company_router);
+app.use("/api/service-req", serviceReqRouter);
 // app.use("/api", verifyToken);
 
 app.use("/api/locations", getLocationRoutes);
@@ -116,7 +118,6 @@ app.use("/api/dashboard", dashboardRoutes);
 app.use("/uploads", express.static("uploads"));
 
 app.use((err, req, res, next) => {
-  
   // Set CORS headers even for errors
   res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
   res.header("Access-Control-Allow-Credentials", "true");
