@@ -215,9 +215,9 @@ export const getAllToilets = async (req, res) => {
         },
         facility_companies: loc.facility_companies
           ? {
-              ...loc.facility_companies,
-              id: loc.facility_companies.id.toString(),
-            }
+            ...loc.facility_companies,
+            id: loc.facility_companies.id.toString(),
+          }
           : null,
         cleaner_assignments: loc.cleaner_assignments.map((assignment) => ({
           ...assignment,
@@ -237,6 +237,182 @@ export const getAllToilets = async (req, res) => {
     res.status(500).send("Error fetching toilet locations");
   }
 };
+
+
+
+// const validateAndFormatSchedule = (scheduleInput) => {
+//   if (!scheduleInput) return null;
+
+//   let schedule = scheduleInput;
+
+//   // If coming as string (multipart form-data case)
+//   if (typeof scheduleInput === "string") {
+//     try {
+//       schedule = JSON.parse(scheduleInput);
+//     } catch (err) {
+//       throw new Error("Invalid schedule JSON format");
+//     }
+//   }
+
+//   if (!schedule.type) {
+//     throw new Error("Schedule type is required");
+//   }
+
+//   // ✅ 24 HOURS
+//   if (schedule.type === "24H") {
+//     return { type: "24H" };
+//   }
+
+//   // ✅ FIXED HOURS
+//   if (schedule.type === "FIXED") {
+//     if (!schedule.openTime || !schedule.closeTime) {
+//       throw new Error("openTime and closeTime are required for FIXED schedule");
+//     }
+
+//     return {
+//       type: "FIXED",
+//       openTime: schedule.openTime,
+//       closeTime: schedule.closeTime,
+//     };
+//   }
+
+//   // ✅ DAY WISE
+//   if (schedule.type === "DAY_WISE") {
+//     if (!schedule.days || typeof schedule.days !== "object") {
+//       throw new Error("Days object required for DAY_WISE schedule");
+//     }
+
+//     const validDays = [
+//       "monday",
+//       "tuesday",
+//       "wednesday",
+//       "thursday",
+//       "friday",
+//       "saturday",
+//       "sunday",
+//     ];
+
+//     const formattedDays = {};
+
+//     for (const day of validDays) {
+//       const dayData = schedule.days[day];
+
+//       if (!dayData || dayData.enabled === false) {
+//         formattedDays[day] = { enabled: false };
+//       } else {
+//         if (!dayData.openTime || !dayData.closeTime) {
+//           throw new Error(`${day} must have openTime and closeTime`);
+//         }
+
+//         formattedDays[day] = {
+//           enabled: true,
+//           openTime: dayData.openTime,
+//           closeTime: dayData.closeTime,
+//         };
+//       }
+//     }
+
+//     return {
+//       type: "DAY_WISE",
+//       days: formattedDays,
+//     };
+//   }
+
+//   throw new Error("Invalid schedule type");
+// };
+
+
+const validateAndFormatSchedule = (scheduleInput) => {
+  if (!scheduleInput) return null;
+
+  let schedule = scheduleInput;
+
+  // If coming as string (multipart form-data case)
+  if (typeof scheduleInput === "string") {
+    try {
+      schedule = JSON.parse(scheduleInput);
+    } catch (err) {
+      throw new Error("Invalid schedule JSON format");
+    }
+  }
+
+  if (!schedule.mode) {
+    throw new Error("Schedule mode is required");
+  }
+
+  // ✅ 24 HOURS
+  if (schedule.mode === "TWENTY_FOUR_HOURS") {
+    return {
+      mode: "TWENTY_FOUR_HOURS",
+    };
+  }
+
+  // ✅ FIXED HOURS
+  if (schedule.mode === "FIXED_HOURS") {
+    if (!schedule.opens_at || !schedule.closes_at) {
+      throw new Error("opens_at and closes_at are required for FIXED_HOURS");
+    }
+
+    return {
+      mode: "FIXED_HOURS",
+      opens_at: schedule.opens_at,
+      closes_at: schedule.closes_at,
+      overnight: schedule.overnight || false,
+    };
+  }
+
+  // ✅ DAY WISE
+  if (schedule.mode === "DAY_WISE") {
+    if (!schedule.days || typeof schedule.days !== "object") {
+      throw new Error("Days object required for DAY_WISE schedule");
+    }
+
+    const validDays = [
+      "monday",
+      "tuesday",
+      "wednesday",
+      "thursday",
+      "friday",
+      "saturday",
+      "sunday",
+    ];
+
+    const formattedDays = {};
+
+    for (const day of validDays) {
+      const dayData = schedule.days[day];
+
+      if (!dayData || dayData.open === false) {
+        formattedDays[day] = {
+          open: false,
+          opens_at: "",
+          closes_at: "",
+          overnight: false,
+        };
+      } else {
+        if (!dayData.opens_at || !dayData.closes_at) {
+          throw new Error(`${day} must have opens_at and closes_at`);
+        }
+
+        formattedDays[day] = {
+          open: true,
+          opens_at: dayData.opens_at,
+          closes_at: dayData.closes_at,
+          overnight: dayData.overnight || false,
+        };
+      }
+    }
+
+    return {
+      mode: "DAY_WISE",
+      days: formattedDays,
+    };
+  }
+
+  throw new Error("Invalid schedule mode");
+};
+
+
 
 export const toggleStatusToilet = async (req, res) => {
   const { id } = req.params;
@@ -267,12 +443,12 @@ export const toggleStatusToilet = async (req, res) => {
       // 2. If disabling → make all assignments unassigned
       !newStatus
         ? prisma.cleaner_assignments.updateMany({
-            where: {
-              location_id: BigInt(id),
-              deleted_at: null,
-            },
-            data: { status: "unassigned" },
-          })
+          where: {
+            location_id: BigInt(id),
+            deleted_at: null,
+          },
+          data: { status: "unassigned" },
+        })
         : prisma.cleaner_assignments.findMany(), // dummy
     ]);
 
@@ -288,8 +464,8 @@ export const toggleStatusToilet = async (req, res) => {
         parent_id: updatedToilet.parent_id?.toString() ?? null,
         facility_company_id:
           updatedToilet?.facility_company_id?.toString() ?? null,
-      
-        },
+
+      },
     });
   } catch (err) {
     console.error("Error toggling toilet status:", err);
@@ -617,6 +793,8 @@ export const createLocation = async (req, res) => {
       usage_category,
       role_id,
       user_id,
+      schedule,
+      is_public,
     } = req.body;
     const { companyId } = req.query;
 
@@ -689,6 +867,27 @@ export const createLocation = async (req, res) => {
 
     console.log("Parsed coordinates:", { parsedLatitude, parsedLongitude });
 
+
+    // 🔥 Handle Schedule
+    let finalSchedule = null;
+
+    if (schedule !== undefined) {
+      try {
+        finalSchedule = validateAndFormatSchedule(schedule);
+      } catch (error) {
+        return res.status(400).json({
+          success: false,
+          error: error.message,
+        });
+      }
+    }
+
+    // 🔥 Handle is_public
+    const parsedIsPublic =
+      is_public !== undefined
+        ? is_public === "true" || is_public === true
+        : true; // default true
+
     // ✅ BUILD DATA WITH RELATION SYNTAX
     const locationData = {
       name,
@@ -705,6 +904,8 @@ export const createLocation = async (req, res) => {
       dist: dist || null,
       status: parsedStatus,
       no_of_photos: parsedNoOfPhotos || null,
+      schedule: finalSchedule,
+      is_public: parsedIsPublic,
     };
 
     //  Add relations using connect syntax
@@ -782,26 +983,26 @@ export const createLocation = async (req, res) => {
       images: newLocation.images || [],
       location_types: newLocation.location_types
         ? {
-            ...newLocation.location_types,
-            id: newLocation.location_types.id.toString(),
-            parent_id: newLocation.location_types.parent_id?.toString() || null,
-            company_id:
-              newLocation.location_types.company_id?.toString() || null,
-          }
+          ...newLocation.location_types,
+          id: newLocation.location_types.id.toString(),
+          parent_id: newLocation.location_types.parent_id?.toString() || null,
+          company_id:
+            newLocation.location_types.company_id?.toString() || null,
+        }
         : null,
       companies: newLocation.companies
         ? {
-            ...newLocation.companies,
-            id: newLocation.companies.id.toString(),
-          }
+          ...newLocation.companies,
+          id: newLocation.companies.id.toString(),
+        }
         : null,
       facility_companies: newLocation.facility_companies
         ? {
-            ...newLocation.facility_companies,
-            id: newLocation.facility_companies.id.toString(),
-            company_id:
-              newLocation.facility_companies.company_id?.toString() || null,
-          }
+          ...newLocation.facility_companies,
+          id: newLocation.facility_companies.id.toString(),
+          company_id:
+            newLocation.facility_companies.company_id?.toString() || null,
+        }
         : null,
     };
 
@@ -869,8 +1070,8 @@ export const updateLocationById = async (req, res) => {
 
     const parsedNoOfPhotos =
       updateData.no_of_photos !== undefined &&
-      updateData.no_of_photos !== null &&
-      updateData.no_of_photos !== ""
+        updateData.no_of_photos !== null &&
+        updateData.no_of_photos !== ""
         ? parseInt(updateData?.no_of_photos, 10)
         : null;
     //  Handle options properly (same as create)
@@ -973,6 +1174,33 @@ export const updateLocationById = async (req, res) => {
     }
 
     console.log("Final usage_category for update:", finalUsageCategory);
+
+
+    let finalSchedule = existingLocation.schedule || null;
+
+    if (updateData.schedule !== undefined) {
+      try {
+        if (updateData.schedule === null || updateData.schedule === "") {
+          finalSchedule = null; // allow clearing schedule
+        } else {
+          finalSchedule = validateAndFormatSchedule(updateData.schedule);
+        }
+      } catch (error) {
+        return res.status(400).json({
+          success: false,
+          error: error.message,
+        });
+      }
+    }
+
+    let finalIsPublic = existingLocation.is_public;
+
+    if (updateData.is_public !== undefined) {
+      finalIsPublic =
+        updateData.is_public === "true" ||
+        updateData.is_public === true;
+    }
+
     const dataToUpdate = {
       name: updateData.name || existingLocation.name,
       latitude:
@@ -1011,6 +1239,9 @@ export const updateLocationById = async (req, res) => {
         updateData?.facility_company_id ||
         existingLocation?.facility_company_id,
       no_of_photos: parsedNoOfPhotos || existingLocation?.no_of_photos,
+      schedule: finalSchedule,
+      is_public: finalIsPublic,
+
     };
 
     // Update parent_id and type_id if provided
@@ -1063,7 +1294,6 @@ export const updateLocationById = async (req, res) => {
   }
 };
 
-// ✅ Add new endpoint to delete specific images
 export const deleteLocationImage = async (req, res) => {
   try {
     const locationId = req.params.id;
@@ -1190,7 +1420,11 @@ export const getAllToiletsForWeb = async (req, res) => {
     const { company_id, type_id, include_unavailable } = req.query;
     // console.log("req.query ", req.query);
     // STEP 1: Build where clause only from query params
-    const whereClause = {};
+    const whereClause = {
+      is_public: true,
+    };
+
+
 
     // STEP 2: Company filter
     if (company_id) {
@@ -1329,15 +1563,15 @@ export const getAllToiletsForWeb = async (req, res) => {
         hygiene_scores: undefined,
         location_types: loc.location_types
           ? {
-              ...loc.location_types,
-              id: loc.location_types.id.toString(),
-            }
+            ...loc.location_types,
+            id: loc.location_types.id.toString(),
+          }
           : null,
         facility_companies: loc.facility_companies
           ? {
-              ...loc.facility_companies,
-              id: loc.facility_companies.id.toString(),
-            }
+            ...loc.facility_companies,
+            id: loc.facility_companies.id.toString(),
+          }
           : null,
         cleaner_assignments: loc.cleaner_assignments.map((a) => ({
           ...a,
