@@ -115,7 +115,7 @@ app.use("/api/companies", companyRouter);
 app.use("/api/roles", roleRouter);
 app.use("/api/shifts", shift_router);
 app.use("/api/dashboard", dashboardRoutes);
-app.use("/api/shift-assignments", shiftAssign_router);
+app.use("/api/shifts-assign", shiftAssign_router);
 app.use("/uploads", express.static("uploads"));
 
 app.use((err, req, res, next) => {
