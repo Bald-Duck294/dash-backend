@@ -22,6 +22,7 @@ import shift_router from "./routes/shiftRoutes.js";
 import fcmRoutes from "./routes/fcmRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
 import serviceReqRouter from "./routes/serviceRequestRoute.js";
+import shiftAssign_router from "./routes/shiftAssignRoutes.js";
 dotenv.config();
 
 const app = express();
@@ -114,7 +115,7 @@ app.use("/api/companies", companyRouter);
 app.use("/api/roles", roleRouter);
 app.use("/api/shifts", shift_router);
 app.use("/api/dashboard", dashboardRoutes);
-
+app.use("/api/shift-assignments", shiftAssign_router);
 app.use("/uploads", express.static("uploads"));
 
 app.use((err, req, res, next) => {
