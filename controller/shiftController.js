@@ -363,17 +363,73 @@ export const updateShift = async (req, res) => {
     }
 };
 
+// export const deleteShift = async (req, res) => {
+//     try {
+//         const { id } = req.params;
+
+//         const existing = await prisma.shifts.findUnique({
+//             where: {
+//                 id: BigInt(id),
+//                 deleted_at: null,
+//             },
+//             include: {
+//                 assignments: true,
+//             },
+//         });
+
+//         if (!existing) {
+//             return res.status(404).json({
+//                 status: "error",
+//                 message: "Shift not found",
+//             });
+//         }
+
+//         if (existing.assignments.length > 0) {
+//             return res.status(400).json({
+//                 status: "error",
+//                 message: `Cannot delete shift. It has ${existing.assignments.length} assignment(s).`,
+//                 assignments_count: existing.assignments.length,
+//             });
+//         }
+
+//         const deletedShift = await prisma.shifts.update({
+//             where: {
+//                 id: BigInt(id),
+//             },
+//             data: {
+//                 deleted_at: new Date(),
+//                 status: false,
+//             },
+//         });
+
+//         // ✅ Convert times to HH:MM format
+//         const formattedShift = formatShiftTimes(deletedShift);
+
+//         res.status(200).json({
+//             status: "success",
+//             message: "Shift deleted successfully",
+//             data: serializeBigInt(formattedShift),
+//         });
+//     } catch (error) {
+//         console.error("Error deleting shift:", error);
+//         res.status(500).json({
+//             status: "error",
+//             message: "Failed to delete shift",
+//             error: process.env.NODE_ENV === "development" ? error.message : undefined,
+//         });
+//     }
+// };
+
+
 export const deleteShift = async (req, res) => {
     try {
         const { id } = req.params;
+        const shiftId = BigInt(id);
 
         const existing = await prisma.shifts.findUnique({
             where: {
-                id: BigInt(id),
+                id: shiftId,
                 deleted_at: null,
-            },
-            include: {
-                assignments: true,
             },
         });
 
@@ -384,38 +440,43 @@ export const deleteShift = async (req, res) => {
             });
         }
 
-        if (existing.assignments.length > 0) {
-            return res.status(400).json({
-                status: "error",
-                message: `Cannot delete shift. It has ${existing.assignments.length} assignment(s).`,
-                assignments_count: existing.assignments.length,
-            });
-        }
-
-        const deletedShift = await prisma.shifts.update({
+        // 1️⃣ Soft delete all related assignments
+        await prisma.shift_assignments.updateMany({
             where: {
-                id: BigInt(id),
+                shiftId: shiftId,
+                deleted_at: null,
             },
+            data: {
+                deleted_at: new Date(),
+                status: "inactive",
+            },
+        });
+
+        // 2️⃣ Soft delete the shift
+        const deletedShift = await prisma.shifts.update({
+            where: { id: shiftId },
             data: {
                 deleted_at: new Date(),
                 status: false,
             },
         });
 
-        // ✅ Convert times to HH:MM format
         const formattedShift = formatShiftTimes(deletedShift);
 
         res.status(200).json({
             status: "success",
-            message: "Shift deleted successfully",
+            message: "Shift and related assignments deleted successfully",
             data: serializeBigInt(formattedShift),
         });
+
     } catch (error) {
         console.error("Error deleting shift:", error);
         res.status(500).json({
             status: "error",
             message: "Failed to delete shift",
-            error: process.env.NODE_ENV === "development" ? error.message : undefined,
+            error: process.env.NODE_ENV === "development"
+                ? error.message
+                : undefined,
         });
     }
 };

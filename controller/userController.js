@@ -37,44 +37,101 @@ import RBACFilterService from "../utils/rbacFilterService.js";
 //   }
 // }
 
+// export async function getUser(req, res) {
+//   try {
+//     const { companyId } = req.query;
+//     const currentUser = req.user; // From auth middleware
+//     // console.log(companyId, "companyId");
+//     // console.log(currentUser, "current user");
+
+//     // Step 1: Get role-based filter
+//     const userFilter = await RBACFilterService.getUserFilter(
+//       currentUser,
+//       "getUser",
+//     );
+
+//     // console.log(userFilter, "user filter from rbac service");
+//     // Step 2: Build complete where clause
+//     const whereClause = {
+//       company_id: companyId,
+//       ...userFilter, // Merge filter from getUserFilter
+//     };
+
+//     // console.log(whereClause, "final where clause");
+
+//     // Step 3: Fetch filtered users
+//     const users = await prisma.users.findMany({
+//       where: whereClause,
+//       include: {
+//         role: true,
+//         cleaner_assignments_as_cleaner: {
+//           where: {
+//             deleted_at: null,
+//           },
+//           select: {
+//             name: true,
+
+//             locations: {
+//               select: {
+//                 name: true,
+//               },
+//             },
+//           },
+//         },
+//       },
+//       orderBy: { id: "desc" },
+//     });
+
+//     // Convert BigInt to string
+//     const usersWithStringIds = users.map((user) => ({
+//       ...user,
+//       id: user.id.toString(),
+//       company_id: user.company_id?.toString() || null,
+//     }));
+
+//     // console.log(usersWithStringIds, "filtered users");
+//     res.json(usersWithStringIds);
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).send({ msg: "Error fetching users", err });
+//   }
+// }
+
 export async function getUser(req, res) {
   try {
-    const { companyId } = req.query;
-    const currentUser = req.user; // From auth middleware
-    // console.log(companyId, "companyId");
-    // console.log(currentUser, "current user");
+    const { companyId, roleId } = req.query;
+    const currentUser = req.user;
 
-    // Step 1: Get role-based filter
     const userFilter = await RBACFilterService.getUserFilter(
       currentUser,
       "getUser",
     );
 
-    // console.log(userFilter, "user filter from rbac service");
-    // Step 2: Build complete where clause
     const whereClause = {
-      company_id: companyId,
-      ...userFilter, // Merge filter from getUserFilter
+      ...userFilter,
     };
 
-    // console.log(whereClause, "final where clause");
+    // Only add company filter if provided
+    if (companyId) {
+      whereClause.company_id = BigInt(companyId);
+    }
 
-    // Step 3: Fetch filtered users
+    // Only add role filter if provided
+    if (roleId) {
+      whereClause.role_id = Number(roleId);
+      // use BigInt(roleId) if your schema uses BigInt
+    }
+
     const users = await prisma.users.findMany({
       where: whereClause,
       include: {
         role: true,
         cleaner_assignments_as_cleaner: {
-          where: {
-            deleted_at: null,
-          },
+          where: { deleted_at: null },
           select: {
             name: true,
-
             locations: {
-              select: {
-                name: true,
-              },
+              select: { name: true },
             },
           },
         },
@@ -82,14 +139,12 @@ export async function getUser(req, res) {
       orderBy: { id: "desc" },
     });
 
-    // Convert BigInt to string
     const usersWithStringIds = users.map((user) => ({
       ...user,
       id: user.id.toString(),
       company_id: user.company_id?.toString() || null,
     }));
 
-    // console.log(usersWithStringIds, "filtered users");
     res.json(usersWithStringIds);
   } catch (err) {
     console.error(err);
@@ -264,32 +319,32 @@ export async function getUserById(req, res) {
       // Role data
       role: user.role
         ? {
-            id: user.role.id,
-            name: user.role.name,
-            description: user.role.description,
-          }
+          id: user.role.id,
+          name: user.role.name,
+          description: user.role.description,
+        }
         : null,
 
       // Company data
       companies: user.companies
         ? {
-            id: user.companies.id.toString(), // ✅ Convert company BigInt
-            name: user.companies.name,
-            description: user.companies.description,
-          }
+          id: user.companies.id.toString(), // ✅ Convert company BigInt
+          name: user.companies.name,
+          description: user.companies.description,
+        }
         : null,
 
       location_assignments: user?.cleaner_assignments_as_cleaner
         ? user?.cleaner_assignments_as_cleaner.map((item) => ({
-            ...item,
-            id: item?.id?.toString(),
-            location_id: item?.id?.toString(),
-            locations: {
-              ...item.locations,
-              id: item?.locations?.id?.toString(),
-              type_id: item?.locations?.type_id?.toString(),
-            },
-          }))
+          ...item,
+          id: item?.id?.toString(),
+          location_id: item?.id?.toString(),
+          locations: {
+            ...item.locations,
+            id: item?.locations?.id?.toString(),
+            type_id: item?.locations?.type_id?.toString(),
+          },
+        }))
         : null,
     };
 
