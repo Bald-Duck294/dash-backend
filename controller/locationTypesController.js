@@ -6,14 +6,13 @@ export const getAllLocationTypes = async (req, res) => {
   // console.log(companyId, "companyId")
   let whereClause = {};
 
-  //  here i am Checking for both undefined and "undefined" string as in 
-  // query parameter it comes as url where undefined is  the actula valude but present in string 
-  //  hence checking for both 
-  if (companyId && companyId !== 'undefined' && companyId !== 'null') {
+  //  here i am Checking for both undefined and "undefined" string as in
+  // query parameter it comes as url where undefined is  the actula valude but present in string
+  //  hence checking for both
+  if (companyId && companyId !== "undefined" && companyId !== "null") {
     // console.log('here in company_id')
     whereClause.company_id = BigInt(companyId); // ✅ Correct field name
   }
-
 
   try {
     const types = await prisma.location_types.findMany({
@@ -42,32 +41,39 @@ export const createLocationType = async (req, res) => {
   console.log("in create location type");
   const { companyId } = req.query;
 
-  console.log('companyId:', companyId, 'type:', typeof companyId);
+  console.log("companyId:", companyId, "type:", typeof companyId);
 
   // Validate companyId
   const isValidCompanyId = (id) => {
-    return id &&
-      id !== 'undefined' &&
-      id !== 'null' &&
+    return (
+      id &&
+      id !== "undefined" &&
+      id !== "null" &&
       !isNaN(Number(id)) &&
-      Number(id) > 0;
+      Number(id) > 0
+    );
   };
 
   // Company ID is required for creating location types
   if (!isValidCompanyId(companyId)) {
     return res.status(400).json({
-      message: "Valid company ID is required to create location type"
+      message: "Valid company ID is required to create location type",
     });
   }
 
   try {
-    const { name, parent_id, is_toilet } = req.body;
+    const { name, parent_id, is_toilet, ui_type } = req.body;
 
     // Validate required fields
-    if (!name || name.trim() === '') {
+    if (!name || name.trim() === "") {
       return res.status(400).json({
-        message: "Location type name is required"
+        message: "Location type name is required",
       });
+    }
+
+    let determinedUiType = ui_type || null;
+    if (is_toilet !== undefined && !determinedUiType) {
+      determinedUiType = Boolean(is_toilet) ? "toilet" : null;
     }
 
     // Create the location type with company_id from query parameter
@@ -75,7 +81,7 @@ export const createLocationType = async (req, res) => {
       data: {
         name: name.trim(),
         parent_id: parent_id ? BigInt(parent_id) : null,
-        is_toilet: Boolean(is_toilet),
+        ui_type: determinedUiType,
         company_id: BigInt(companyId),
       },
     });
@@ -88,41 +94,39 @@ export const createLocationType = async (req, res) => {
       company_id: newType.company_id.toString(),
     };
 
-    console.log('Created location type:', serialized);
+    console.log("Created location type:", serialized);
 
     res.status(201).json({
       success: true,
       message: "Location type created successfully",
-      data: serialized
+      data: serialized,
     });
-
   } catch (err) {
-    console.error('Error creating location type:', err);
+    console.error("Error creating location type:", err);
 
     // Handle specific Prisma errors
-    if (err.code === 'P2002') {
+    if (err.code === "P2002") {
       return res.status(400).json({
-        message: "A location type with this name already exists for this company"
+        message:
+          "A location type with this name already exists for this company",
       });
     }
 
-    if (err.code === 'P2003') {
+    if (err.code === "P2003") {
       return res.status(400).json({
-        message: "Invalid parent location type or company reference"
+        message: "Invalid parent location type or company reference",
       });
     }
 
     res.status(500).json({
       message: "Failed to create location type",
-      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+      error: process.env.NODE_ENV === "development" ? err.message : undefined,
     });
   }
 };
 
-
 // PATCH /api/location-types/:id
 // PATCH /api/location-types/:id
-
 
 export const updateLocationType = async (req, res) => {
   console.log("update location types");
@@ -163,7 +167,7 @@ export const markAsToilet = async (req, res) => {
     const updated = await prisma.location_types.update({
       where: { id: BigInt(id) },
       data: {
-        is_toilet: true,
+        ui_type: "toilet",
       },
     });
 
@@ -181,10 +185,9 @@ export const markAsToilet = async (req, res) => {
 
 // GET /api/location-types/tree
 export const getLocationTypeTree = async (req, res) => {
-
   const { companyId } = req.body;
 
-  console.log(companyId, "get companyId from location type")
+  console.log(companyId, "get companyId from location type");
   try {
     const all = await prisma.location_types.findMany({
       where: { company_id: BigInt(1) },
@@ -222,7 +225,6 @@ export const getLocationTypeTree = async (req, res) => {
     res.status(500).json({ message: "Failed to fetch location type tree" });
   }
 };
-
 
 // // DELETE /api/location-types/:id
 // export const deleteLocationType = async (req, res) => {
@@ -297,7 +299,6 @@ export const getLocationTypeTree = async (req, res) => {
 //   }
 // };
 
-
 export const deleteLocationType = async (req, res) => {
   const { id } = req.params;
 
@@ -309,15 +310,15 @@ export const deleteLocationType = async (req, res) => {
       include: {
         other_location_types: true, // child types
         locations: {
-          where: { deleted_at: null } // only active locations
-        }
-      }
+          where: { deleted_at: null }, // only active locations
+        },
+      },
     });
 
     if (!existingType) {
       return res.status(404).json({
         success: false,
-        message: "Location type not found"
+        message: "Location type not found",
       });
     }
 
@@ -325,7 +326,8 @@ export const deleteLocationType = async (req, res) => {
     if (existingType.other_location_types.length > 0) {
       return res.status(400).json({
         success: false,
-        message: "Cannot delete location type with child types. Delete children first."
+        message:
+          "Cannot delete location type with child types. Delete children first.",
       });
     }
 
@@ -333,26 +335,26 @@ export const deleteLocationType = async (req, res) => {
     if (existingType.locations.length > 0) {
       await prisma.locations.updateMany({
         where: { type_id: typeId },
-        data: { type_id: null }
+        data: { type_id: null },
       });
     }
 
     // ✅ Step 2: Now delete the type
     await prisma.location_types.delete({
-      where: { id: typeId }
+      where: { id: typeId },
     });
 
     return res.json({
       success: true,
-      message: "Location type deleted and related locations unassigned successfully"
+      message:
+        "Location type deleted and related locations unassigned successfully",
     });
-
   } catch (err) {
     console.error("Error deleting location type:", err);
     res.status(500).json({
       success: false,
       message: "Failed to delete location type",
-      error: err.message
+      error: err.message,
     });
   }
 };
